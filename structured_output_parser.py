@@ -1,0 +1,60 @@
+"""
+Structured Output Parser : 
+It allows you to define your desired Schema or Output Structure
+
+Benefit : You can Enforce the Schema 
+Limitation : You can not perform Data Validation , can just tell about the data format ot schema 
+"""
+
+from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
+from dotenv import load_dotenv
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
+from langchain.output_parsers import ResponseSchema, StructuredOutputParser
+
+
+load_dotenv()
+
+# Define the model
+llm = HuggingFaceEndpoint(
+    repo_id="google/gemma-2-2b-it",
+    task="text-generation"
+)
+
+model = ChatHuggingFace(llm=llm)
+
+# Define Schema 
+
+schema = [
+    ResponseSchema(name = 'fact_1' , description = 'Fact 1 about the topic') , 
+    ResponseSchema(name = 'fact_2' , description = 'Fact 2 about the topic') , 
+    ResponseSchema(name = 'fact_3' , description = 'Fact 3 about the topic') , 
+    
+]
+
+parser = StructuredOutputParser.from_response_schema(schema)
+
+template = PromptTemplate(
+    template = 'Give 3 fact about {topic} \n {format_instruction}' , 
+    input_variables = ['topic'] , 
+    partial_variables = {'format_instruction' : parser.get_format_instructions()}
+)
+
+prompt = template.invoke({'topic':'black hole'})
+
+result = model.invoke(prompt)
+
+final_result = parser.parse(result.content)
+
+print(final_result)
+
+"""
+FOR CHAIN :
+
+chain = template | model | parser
+
+result = chain.invoke({'topic'}:'black hole')
+
+print(result)
+"""
+
